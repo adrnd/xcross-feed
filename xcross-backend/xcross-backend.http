@@ -1,0 +1,6 @@
+@xcross_backend_HostAddress = http://localhost:5092
+
+GET {{xcross_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
