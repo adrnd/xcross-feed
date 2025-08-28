@@ -20,7 +20,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/build .
 
-# Expose port 5000 inside container
+# Expose port 8000 inside container
 EXPOSE 8080
 
 # Run the app
