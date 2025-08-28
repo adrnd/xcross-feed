@@ -21,7 +21,7 @@ WORKDIR /app
 COPY --from=build /app/build .
 
 # Expose port 5000 inside container
-EXPOSE 5000
+EXPOSE 8080
 
 # Run the app
 ENTRYPOINT ["dotnet", "xcross-backend.dll"]
