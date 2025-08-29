@@ -442,3 +442,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+#manually added
+xcross-backend/obj/Debug/net9.0/xcross-backend.AssemblyInfoInputs.cache
+xcross-backend/obj/Debug/net9.0/xcross-backend.AssemblyInfo.cs
