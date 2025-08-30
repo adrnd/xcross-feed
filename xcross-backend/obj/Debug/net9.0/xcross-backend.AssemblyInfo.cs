@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("xcross-backend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a5d1ecc8e63901053342d899638274ecd0656aab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3b1f601d3fe5896febf9b93dfd6eeb65da17e7e")]
 [assembly: System.Reflection.AssemblyProductAttribute("xcross-backend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("xcross-backend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,7 +1,7 @@
 public class TimingService : IHostedService, IDisposable
 {
     //reference: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services?view=aspnetcore-9.0&tabs=visual-studio
-    
+
     private int executionCount = 0;
     private readonly ILogger<TimingService> _logger;
     private Timer? _timer = null;

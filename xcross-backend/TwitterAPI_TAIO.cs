@@ -1,8 +1,6 @@
-using System.Net;
-using System.Net.Http;
-using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.DataProtection;
+using System.Globalization;
+using System.Text.Json;
 
 namespace xcross_backend.Controllers;
 /// <summary>
@@ -19,12 +17,12 @@ public class TwitterAPI_TAIO : ControllerBase
     public class TweetStore : ITweetStore
     {
         // This list lives as long as the app does
-        public List<BasicTweet> TweetsList { get; } = new();
-        int MaxAmount = 60;
+        public List<BasicTweet> TweetsList { get; set; } = new();
+        int MaxAmount = 30;
         public void AddToTweets(IEnumerable<BasicTweet> newTweets)
         {
             TweetsList.AddRange(newTweets);
-            TweetsList.OrderByDescending(t => t.Date).ToList();
+            TweetsList = TweetsList.OrderByDescending(t => t.Date).ToList();
             if (TweetsList.Count >= MaxAmount)
             {
                 // Remove everything after the Max
@@ -37,17 +35,17 @@ public class TwitterAPI_TAIO : ControllerBase
     {
         _tweetStore = tweetStore;
     }
-    
+
     static List<string> usernames = ["rodekorsnorge", "ICRC"];//add more usernames as needed
 
     public class BasicTweet
     {
-        required public string TweetId { get; set; }
-        required public string Account { get; set; }
-        required public string TweetText { get; set; }
-        required public string Date { get; set; }//TODO: parse date and pictures properly
+        public string TweetId { get; set; }
+        public string Account { get; set; }
+        public string TweetText { get; set; }
+        public string Date { get; set; }//TODO: parse date and pictures properly
         public string? ProfilePic { get; set; }
-        //public string? image { get; set; }
+        public string? MediaURL { get; set; }
     }
     public async Task<List<BasicTweet>> PullTweets()
     {
@@ -55,7 +53,7 @@ public class TwitterAPI_TAIO : ControllerBase
         var config = new ConfigurationBuilder()
         .AddUserSecrets<Program>()
         .Build();
-        
+
         int tweetCount = 10; //number of tweets to pull per user, adjust as needed
         bool ignoreDuplicates = true; //if the ID is already on the list, we skip it early. This could be disabled to allow updating statistics like retweets, or likes.
         string? apiHost = config["ApiHost_TAIO"];
@@ -82,7 +80,7 @@ public class TwitterAPI_TAIO : ControllerBase
                 apiUri = Environment.GetEnvironmentVariable("ApiRequestUri_TAIO");
                 Console.WriteLine("ApiRequestUri_TAIO: " + apiUri);
 
-        }
+            }
             if (apiHost == null || apiKey == null || apiUri == null)
             {
                 throw new Exception("Missing API credentials in environment variables.");
@@ -153,8 +151,10 @@ public class TwitterAPI_TAIO : ControllerBase
     bool MergeTweetData(System.Text.Json.JsonElement tweetlist, bool ignoreDuplicates = true)
     {
         List<BasicTweet> newTweets = new List<BasicTweet>();
+        JsonElement tweet_legacy;
         foreach (var tweet in tweetlist.EnumerateArray())
         {
+            var scrapedTweet = new BasicTweet();
             try
             {
                 //we get the entryID for any tweet/item early on, we'll write to the console to check which tweets are not parsed correctly for debugging
@@ -180,8 +180,8 @@ public class TwitterAPI_TAIO : ControllerBase
                 //idea: we could just hunt and parse for the "full_text" property directly, but this way we ensure we're in the right place and we can extract more info later
                 var tweet_details = itemContent.GetProperty("tweet_results");
                 tweet_details = tweet_details.GetProperty("result");
-                var tweet_legacy = tweet_details.GetProperty("legacy"); //legacy is where the details about the tweet itself are located
-                
+                tweet_legacy = tweet_details.GetProperty("legacy"); //legacy is where the details about the tweet itself are located
+
                 var full_text = tweet_legacy.GetProperty("full_text").GetString() ?? "";
                 if (full_text.Contains("RT @"))
                 {
@@ -199,20 +199,14 @@ public class TwitterAPI_TAIO : ControllerBase
                 var tweet_user_details = tweet_details.GetProperty("core").GetProperty("user_results").GetProperty("result").GetProperty("legacy");
                 var displayName = tweet_user_details.GetProperty("name").GetString() ?? "";
                 var profilePicUrl = tweet_user_details.GetProperty("profile_image_url_https").GetString() ?? "";
-
-                //if we get here, we can create our BasicTweet object
-                //TODO: check what happens when we only have a picture and no text
-                var scrapedTweet = new BasicTweet
+                scrapedTweet = new BasicTweet
                 {
                     TweetId = tweetID,
-                    Account = displayName, 
+                    Account = displayName,
                     TweetText = full_text,
                     Date = tweetdate,
-                    ProfilePic = profilePicUrl
+                    ProfilePic = profilePicUrl,
                 };
-                newTweets.Add(scrapedTweet);
-                //add them to a local list or database as needed, for the test we just output them
-                Console.WriteLine($"{scrapedTweet.Account} tweeted ID: {scrapedTweet.TweetId}: {scrapedTweet.TweetText}");
             }
             catch (KeyNotFoundException ex)
             {
@@ -220,8 +214,30 @@ public class TwitterAPI_TAIO : ControllerBase
                 Console.WriteLine($"Parsing error " + ex.Message);
                 throw;
             }
+            string mediaURL = string.Empty;
+            try
+            {
+                var test1 = tweet_legacy.GetProperty("entities");
+                var test2 = test1.GetProperty("media").EnumerateArray();
+                foreach (var medi in test2)
+                {
+                    mediaURL = medi.GetProperty("media_url_https").ToString();
+                }
+                Console.WriteLine($"Parsing error ");
+            }
+            catch (KeyNotFoundException)
+            { mediaURL = null; }
 
+            //if we get here, we can create our BasicTweet object
+            //TODO: check what happens when we only have a picture and no text
+
+            if (mediaURL != null || mediaURL == string.Empty) { scrapedTweet.MediaURL = mediaURL; }
+            newTweets.Add(scrapedTweet);
+            //add them to a local list or database as needed, for the test we just output them
+            Console.WriteLine($"{scrapedTweet.Account} tweeted ID: {scrapedTweet.TweetId}: {scrapedTweet.TweetText}");
         }
+
+
         if (newTweets.Count == 0)
         {
             return false;

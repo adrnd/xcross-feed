@@ -1,7 +1,4 @@
-﻿using System.Diagnostics;
-using DotNetEnv;
-using Xunit.Abstractions;
-using xcross_backend;
+﻿using Xunit.Abstractions;
 namespace TwitterTest;
 
 public class UnitTest1

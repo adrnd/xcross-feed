@@ -1,4 +1,3 @@
-using System.Net.WebSockets;
 using xcross_backend.Controllers;
 
 
@@ -29,10 +28,11 @@ app.Lifetime.ApplicationStarted.Register(async () =>
     var start = scope.ServiceProvider.GetRequiredService<TwitterAPI_TAIO>();
     try
     {
-    await start.PullTweets();
-    }catch(Exception ex)
+        await start.PullTweets();
+    }
+    catch (Exception ex)
     {
-        Console.WriteLine("Initial Twitter pull failed: "+ex.ToString());
+        Console.WriteLine("Initial Twitter pull failed: " + ex.ToString());
     }
 });
 
