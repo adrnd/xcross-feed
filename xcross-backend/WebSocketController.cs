@@ -38,7 +38,7 @@ public class WebSocketController : ControllerBase
         }
     }
     [Route("/chirp")]
-    public async Task Refresh()
+    public async Task ManualRefresh()
     {
         var tempList = _tweetStore.TweetsList[0].TweetId;
         await _tweeter.PullTweets();
@@ -47,7 +47,7 @@ public class WebSocketController : ControllerBase
         {
             foreach (var socket in _sockets)
             {
-                var bytes = JsonSerializer.SerializeToUtf8Bytes("nothing new");
+                var bytes = JsonSerializer.SerializeToUtf8Bytes("[{\"nothing new\"}]");
                 await socket.SendAsync(bytes, WebSocketMessageType.Text, true, default);
             }
         }
