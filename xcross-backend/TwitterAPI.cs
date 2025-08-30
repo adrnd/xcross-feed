@@ -36,7 +36,7 @@ public class TwitterInteractions
         {
 
 
-            string? apiUri = config["ApiRequestUri_TAIO"]
+            string? apiUri = config["ApiRequestUri_TAIO"];
             if(apiHost == null || apiKey == null || apiUri == null)
             {
                 throw new Exception("Missing API credentials in environment variables.");
