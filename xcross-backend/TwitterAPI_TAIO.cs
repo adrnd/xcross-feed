@@ -144,7 +144,7 @@ public class TwitterAPI_TAIO
                 //we get the entryID for any tweet/item early on, we'll write to the console to check which tweets are not parsed correctly for debugging
                 var result = tweet.GetProperty("content");
                 string tweetID = tweet.GetProperty("entryId").GetString() ?? "no-id";
-                Console.WriteLine(tweetID);
+                //Console.WriteLine(tweetID);
                 if (ignoreDuplicates && TweetsList.Any(t => t.TweetId == tweetID))
                 {
                     continue; //skip already known tweets if the flag is set
