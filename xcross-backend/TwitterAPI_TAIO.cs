@@ -10,10 +10,19 @@ namespace xcross_backend;
 public class TwitterAPI_TAIO
 {
 
+    public class TweetListUpdatedEventArgs : EventArgs
+    {
+        public List<BasicTweet> TweetsList { get; }
+        public TweetListUpdatedEventArgs(List<BasicTweet> tweetsList)
+        {
+            TweetsList = tweetsList;
+        }
+    }
 
-    static List<BasicTweet> TweetsList = new List<BasicTweet>();
+    public delegate void TweetListUpdatedEventHandle(object sender, TweetListUpdatedEventArgs e);
+    public event TweetListUpdatedEventHandle? TweetListUpdated;
+    public List<BasicTweet> TweetsList = new List<BasicTweet>();
     static List<string> usernames = ["rodekorsnorge", "ICRC"];//add more usernames as needed
-    
 
     public class BasicTweet
     {
@@ -24,7 +33,7 @@ public class TwitterAPI_TAIO
         public string? ProfilePic { get; set; }
         //public string? image { get; set; }
     }
-    public static async Task<List<BasicTweet>> PullTweets()
+    public async Task<List<BasicTweet>> PullTweets()
     {
 
         var config = new ConfigurationBuilder()
@@ -33,17 +42,35 @@ public class TwitterAPI_TAIO
         int tweetCount = 10; //number of tweets to pull per user, adjust as needed
         bool ignoreDuplicates = true; //if the ID is already on the list, we skip it early. This could be disabled to allow updating statistics like retweets, or likes.
         string? apiHost = config["ApiHost_TAIO"];
+        if (apiHost == null)
+        {
+            apiHost = Environment.GetEnvironmentVariable("ApiHost_TAIO");
+            Console.WriteLine("apiHost from env: " + apiHost);
+        }
         string? apiKey = config["ApiKey_TAIO"];
+        if (apiKey == null)
+        {
+            apiKey = Environment.GetEnvironmentVariable("ApiKey_TAIO");
+            Console.WriteLine("apiKey: " + apiKey);
+
+        }
+        bool listUpdated = false;
         foreach (string user in usernames)
         {
 
 
             string? apiUri = config["ApiRequestUri_TAIO"];
-            if(apiHost == null || apiKey == null || apiUri == null)
+            if (apiUri == null)
+            {
+                apiUri = Environment.GetEnvironmentVariable("ApiRequestUri_TAIO");
+                Console.WriteLine("ApiRequestUri_TAIO: " + apiUri);
+
+        }
+            if (apiHost == null || apiKey == null || apiUri == null)
             {
                 throw new Exception("Missing API credentials in environment variables.");
             }
-            apiUri = apiUri.Replace("%COUNT%", tweetCount.ToString())+user;
+            apiUri = apiUri.Replace("%COUNT%", tweetCount.ToString()) + user;
             Console.WriteLine("Environment variables loaded successfully.");
 
             var client = new HttpClient();
@@ -90,19 +117,24 @@ public class TwitterAPI_TAIO
                 if (MergeTweetData(tweetlist, ignoreDuplicates) == true)
                 {
                     TweetsList = TweetsList.OrderByDescending(t => t.Date).ToList(); //sort by date, newest first
+                    listUpdated = true;
                     Console.WriteLine("Tweets merged.");
                 }
-                else
+            
                 {
                     Console.WriteLine("No no tweets.");
                 }
             }
 
         }
+        if (listUpdated)
+        {
+            TweetListUpdated?.Invoke(this, new TweetListUpdatedEventArgs(TweetsList));
+        }
         return TweetsList;
     }
 
-    static bool MergeTweetData(System.Text.Json.JsonElement tweetlist, bool ignoreDuplicates = true)
+    bool MergeTweetData(System.Text.Json.JsonElement tweetlist, bool ignoreDuplicates = true)
     {
         List<BasicTweet> newTweets = new List<BasicTweet>();
         foreach (var tweet in tweetlist.EnumerateArray())
