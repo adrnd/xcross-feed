@@ -19,7 +19,7 @@ public class UnitTest1
     [Fact]
     public async Task ScrapeTwitter_Test()
     {
-        var TweetList = await TwitterInteractions.PullTweets();
+        var TweetList = await TwitterAPI_TAIO.PullTweets();
         Assert.True(TweetList.Count > 0);
         foreach (var tweet in TweetList)
         {
