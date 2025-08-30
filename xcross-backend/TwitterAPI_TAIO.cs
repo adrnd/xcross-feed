@@ -120,7 +120,7 @@ public class TwitterAPI_TAIO
                     listUpdated = true;
                     Console.WriteLine("Tweets merged.");
                 }
-            
+                else
                 {
                     Console.WriteLine("No no tweets.");
                 }
