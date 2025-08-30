@@ -36,11 +36,12 @@ public class TwitterInteractions
         {
 
 
-            string? apiUri = config["ApiRequestUri_TAIO"].Replace("%COUNT%", tweetCount.ToString())+user;
-            if (apiHost == null || apiKey == null || apiUri == null)
+            string? apiUri = config["ApiRequestUri_TAIO"]
+            if(apiHost == null || apiKey == null || apiUri == null)
             {
                 throw new Exception("Missing API credentials in environment variables.");
             }
+            apiUri = apiUri.Replace("%COUNT%", tweetCount.ToString())+user;
             Console.WriteLine("Environment variables loaded successfully.");
 
             var client = new HttpClient();
