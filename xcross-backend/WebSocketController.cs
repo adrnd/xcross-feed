@@ -20,7 +20,8 @@ public class WebSocketController : ControllerBase
         _tweetStore = tweetStore;
         _tweeter = tweeter;
     }
-    private readonly List<WebSocket> _sockets = new();
+    private List<WebSocket> _sockets = new();
+    private List<string> messageQ = new();
 
 
     [Route("/ws")]
@@ -45,11 +46,7 @@ public class WebSocketController : ControllerBase
         var newList = _tweetStore.TweetsList[0].TweetId;
         if (tempList == newList)
         {
-            foreach (var socket in _sockets)
-            {
-                var bytes = JsonSerializer.SerializeToUtf8Bytes("[{\"nothing new\"}]");
-                await socket.SendAsync(bytes, WebSocketMessageType.Text, true, default);
-            }
+            messageQ.Add(DateTime.Now + "nothing new");
         }
     }
     public async Task HandleWebSocketConnection(WebSocket socket)
@@ -74,14 +71,22 @@ public class WebSocketController : ControllerBase
             else
             if (result.MessageType == WebSocketMessageType.Text)
             {
-                var text = result.ToString();
+
+                var text = buffer.ToString();
                 if (text == null) continue;
                 Console.WriteLine("Received message: " + text);
                 if (text.Contains("chirp"))
                 {
                     await _tweeter.PullTweets();
                 }
-
+            }
+            var tempList = _tweetStore.TweetsList[0].TweetId;
+            await _tweeter.PullTweets();
+            var newList = _tweetStore.TweetsList[0].TweetId;
+            if (tempList == newList)
+            {
+                var msbytes = System.Text.Encoding.UTF8.GetBytes("nothing new");
+                await socket.SendAsync(msbytes, WebSocketMessageType.Text, true, default);
             }
 
         }
