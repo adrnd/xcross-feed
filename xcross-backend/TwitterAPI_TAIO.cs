@@ -1,27 +1,43 @@
 using System.Net;
 using System.Net.Http;
 using System.Globalization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace xcross_backend;
+namespace xcross_backend.Controllers;
 /// <summary>
 /// Class to pull tweets from Twitter using the Twitter AIO API (https://rapidapi.com/viperscores-viperscores-default/api/twitter-aio/)
 /// </summary>
-public class TwitterAPI_TAIO
+public class TwitterAPI_TAIO : ControllerBase
 {
-
-    public class TweetListUpdatedEventArgs : EventArgs
+    public interface ITweetStore
     {
-        public List<BasicTweet> TweetsList { get; }
-        public TweetListUpdatedEventArgs(List<BasicTweet> tweetsList)
-        {
-            TweetsList = tweetsList;
-        }
+        List<BasicTweet> TweetsList { get; }
+        void AddToTweets(IEnumerable<BasicTweet> tweets);
     }
 
-    public delegate void TweetListUpdatedEventHandle(object sender, TweetListUpdatedEventArgs e);
-    public event TweetListUpdatedEventHandle? TweetListUpdated;
-    public List<BasicTweet> TweetsList = new List<BasicTweet>();
+    public class TweetStore : ITweetStore
+    {
+        // This list lives as long as the app does
+        public List<BasicTweet> TweetsList { get; } = new();
+        int MaxAmount = 60;
+        public void AddToTweets(IEnumerable<BasicTweet> newTweets)
+        {
+            TweetsList.AddRange(newTweets);
+            TweetsList.OrderByDescending(t => t.Date).ToList();
+            if (TweetsList.Count >= MaxAmount)
+            {
+                // Remove everything after the Max
+                TweetsList.Slice(0, MaxAmount);
+            }
+        }
+    }
+    private readonly ITweetStore _tweetStore;
+    public TwitterAPI_TAIO(ITweetStore tweetStore)
+    {
+        _tweetStore = tweetStore;
+    }
+    
     static List<string> usernames = ["rodekorsnorge", "ICRC"];//add more usernames as needed
 
     public class BasicTweet
@@ -39,6 +55,7 @@ public class TwitterAPI_TAIO
         var config = new ConfigurationBuilder()
         .AddUserSecrets<Program>()
         .Build();
+        
         int tweetCount = 10; //number of tweets to pull per user, adjust as needed
         bool ignoreDuplicates = true; //if the ID is already on the list, we skip it early. This could be disabled to allow updating statistics like retweets, or likes.
         string? apiHost = config["ApiHost_TAIO"];
@@ -116,7 +133,6 @@ public class TwitterAPI_TAIO
                 }
                 if (MergeTweetData(tweetlist, ignoreDuplicates) == true)
                 {
-                    TweetsList = TweetsList.OrderByDescending(t => t.Date).ToList(); //sort by date, newest first
                     listUpdated = true;
                     Console.WriteLine("Tweets merged.");
                 }
@@ -129,9 +145,9 @@ public class TwitterAPI_TAIO
         }
         if (listUpdated)
         {
-            TweetListUpdated?.Invoke(this, new TweetListUpdatedEventArgs(TweetsList));
+            //TODO: add even to subscribe to?
         }
-        return TweetsList;
+        return _tweetStore.TweetsList;
     }
 
     bool MergeTweetData(System.Text.Json.JsonElement tweetlist, bool ignoreDuplicates = true)
@@ -145,7 +161,7 @@ public class TwitterAPI_TAIO
                 var result = tweet.GetProperty("content");
                 string tweetID = tweet.GetProperty("entryId").GetString() ?? "no-id";
                 //Console.WriteLine(tweetID);
-                if (ignoreDuplicates && TweetsList.Any(t => t.TweetId == tweetID))
+                if (ignoreDuplicates && _tweetStore.TweetsList.Any(t => t.TweetId == tweetID))
                 {
                     continue; //skip already known tweets if the flag is set
                 }
@@ -212,7 +228,8 @@ public class TwitterAPI_TAIO
         }
         else
         {
-            TweetsList.AddRange(newTweets);
+            //writing only new entries to the TweetStore Interface
+            _tweetStore.AddToTweets(newTweets);
             return true;
         }
 

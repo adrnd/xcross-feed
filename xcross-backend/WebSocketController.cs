@@ -1,7 +1,8 @@
+using Microsoft.AspNetCore.Mvc;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
+using static xcross_backend.Controllers.TwitterAPI_TAIO;
 
 namespace xcross_backend.Controllers;
 
@@ -9,10 +10,19 @@ namespace xcross_backend.Controllers;
 /// <summary>
 /// A simple WebSocket controller to demonstrate WebSocket functionality in ASP.NET Core.
 /// </summary>
-public class WebSocketTweetController : ControllerBase
+public class WebSocketController : ControllerBase
 {
-    private TwitterAPI_TAIO _tweeter = new TwitterAPI_TAIO();
+    private readonly TwitterAPI_TAIO.ITweetStore _tweetStore;
+    private TwitterAPI_TAIO _tweeter;
+
+    public WebSocketController(ITweetStore tweetStore, TwitterAPI_TAIO tweeter)
+    {
+        _tweetStore = tweetStore;
+        _tweeter = tweeter;
+    }
     private readonly List<WebSocket> _sockets = new();
+
+
     [Route("/ws")]
     public async Task Get()
     {
@@ -30,9 +40,9 @@ public class WebSocketTweetController : ControllerBase
     [Route("/chirp")]
     public async Task Refresh()
     {
-        var tempList = _tweeter.TweetsList;
+        var tempList = _tweetStore.TweetsList[0].TweetId;
         await _tweeter.PullTweets();
-        var newList = _tweeter.TweetsList;
+        var newList = _tweetStore.TweetsList[0].TweetId;
         if (tempList == newList)
         {
             foreach (var socket in _sockets)
@@ -47,8 +57,8 @@ public class WebSocketTweetController : ControllerBase
         _sockets.Add(socket);
         var buffer = new byte[1024 * 2];
         //push the initial tweet list now already?
-        await _tweeter.PullTweets();  //remove later
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(_tweeter.TweetsList);
+        //await _tweeter.PullTweets();  //remove later
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(_tweetStore.TweetsList);
         await socket.SendAsync(bytes, WebSocketMessageType.Text, true, default);
 
         while (socket.State == WebSocketState.Open)
@@ -73,13 +83,6 @@ public class WebSocketTweetController : ControllerBase
                 }
 
             }
-            _tweeter.TweetListUpdated += async (sender, args) =>
-             {
-                Console.WriteLine("Got update notice, sending ...");
-                var updatedBytes = JsonSerializer.SerializeToUtf8Bytes(args.TweetsList);
-                await socket.SendAsync(updatedBytes, WebSocketMessageType.Text, true, default);
-                Console.WriteLine("Sent updated tweet list via WebSocket.");
-             };
 
         }
         _sockets.Remove(socket);
