@@ -1,6 +1,8 @@
 using System.Net.WebSockets;
 
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddUserSecrets<Program>();
 //Controllers for WebSocket support to the Builder
 builder.Services.AddControllers();
 var app = builder.Build();
