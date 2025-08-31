@@ -16,7 +16,7 @@ public class TwitterAPI_TAIO : ControllerBase
 
     public class TweetStore : ITweetStore
     {
-        // This list lives as long as the app does
+        //list remains until the server or app is restarted
         public List<BasicTweet> TweetsList { get; set; } = new();
         int MaxAmount = 30;
         public void AddToTweets(IEnumerable<BasicTweet> newTweets)
@@ -26,7 +26,7 @@ public class TwitterAPI_TAIO : ControllerBase
             if (TweetsList.Count >= MaxAmount)
             {
                 // Remove everything after the Max
-                TweetsList.Slice(0, MaxAmount);
+                TweetsList = TweetsList[..MaxAmount];
             }
         }
     }
@@ -36,14 +36,14 @@ public class TwitterAPI_TAIO : ControllerBase
         _tweetStore = tweetStore;
     }
 
-    static List<string> usernames = ["rodekorsnorge", "ICRC"];//add more usernames as needed
+    static List<string> usernames = ["rodekorsnorge", "RedCross", "Adrian1518011"];//add more usernames as needed
 
     public class BasicTweet
     {
         public string TweetId { get; set; }
         public string Account { get; set; }
         public string TweetText { get; set; }
-        public string Date { get; set; }//TODO: parse date and pictures properly
+        public string Date { get; set; }
         public string? ProfilePic { get; set; }
         public string? MediaURL { get; set; }
     }
@@ -54,38 +54,35 @@ public class TwitterAPI_TAIO : ControllerBase
         .AddUserSecrets<Program>()
         .Build();
 
-        int tweetCount = 10; //number of tweets to pull per user, adjust as needed
+        int tweetCount = 10; //number of tweets to pull per user, adjust as needed, currently the API pulls 20 in any case (even on their preview)
         bool ignoreDuplicates = true; //if the ID is already on the list, we skip it early. This could be disabled to allow updating statistics like retweets, or likes.
+        
         string? apiHost = config["ApiHost_TAIO"];
         if (apiHost == null)
         {
             apiHost = Environment.GetEnvironmentVariable("ApiHost_TAIO");
-            Console.WriteLine("apiHost from env: " + apiHost);
         }
         string? apiKey = config["ApiKey_TAIO"];
         if (apiKey == null)
         {
             apiKey = Environment.GetEnvironmentVariable("ApiKey_TAIO");
-            Console.WriteLine("apiKey: " + apiKey);
 
         }
         bool listUpdated = false;
         foreach (string user in usernames)
         {
 
-
             string? apiUri = config["ApiRequestUri_TAIO"];
             if (apiUri == null)
             {
                 apiUri = Environment.GetEnvironmentVariable("ApiRequestUri_TAIO");
-                Console.WriteLine("ApiRequestUri_TAIO: " + apiUri);
 
             }
             if (apiHost == null || apiKey == null || apiUri == null)
             {
                 throw new Exception("Missing API credentials in environment variables.");
             }
-            apiUri = apiUri.Replace("%COUNT%", tweetCount.ToString()) + user;
+            apiUri = apiUri.Replace("%COUNT%", tweetCount.ToString()) + user; //TODO: needs to be adjusted to account for other link formats
             Console.WriteLine("Environment variables loaded successfully.");
 
             var client = new HttpClient();
@@ -101,7 +98,14 @@ public class TwitterAPI_TAIO : ControllerBase
             };
             using (var response = await client.SendAsync(request))
             {
-                response.EnsureSuccessStatusCode();
+                try
+                {
+                    response.EnsureSuccessStatusCode();
+                }
+                catch 
+                {
+                    break;
+                }
                 var body = await response.Content.ReadAsStringAsync();
                 var tweetsjson = System.Text.Json.JsonDocument.Parse(body);
                 var root = tweetsjson.RootElement;
@@ -138,12 +142,13 @@ public class TwitterAPI_TAIO : ControllerBase
                 {
                     Console.WriteLine("No no tweets.");
                 }
+                await Task.Delay(1500); //reducing chances of running into the API limit
             }
 
         }
         if (listUpdated)
         {
-            //TODO: add even to subscribe to?
+            //TODO: add event to subscribe to?
         }
         return _tweetStore.TweetsList;
     }
@@ -236,8 +241,7 @@ public class TwitterAPI_TAIO : ControllerBase
             //add them to a local list or database as needed, for the test we just output them
             Console.WriteLine($"{scrapedTweet.Account} tweeted ID: {scrapedTweet.TweetId}: {scrapedTweet.TweetText}");
         }
-
-
+        //returning results
         if (newTweets.Count == 0)
         {
             return false;

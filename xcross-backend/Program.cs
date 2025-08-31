@@ -6,7 +6,8 @@ builder.Configuration.AddUserSecrets<Program>();
 builder.Services.AddSingleton<WebSocketController>();
 builder.Services.AddSingleton<TwitterAPI_TAIO>();
 builder.Services.AddSingleton<TwitterAPI_TAIO.ITweetStore, TwitterAPI_TAIO.TweetStore>(); //in-memory static list of our gathered tweets
-builder.Services.AddHostedService<TimingService>();
+builder.Services.AddSingleton<TimingService>();
+
 
 builder.Services.AddControllers();
 
@@ -18,17 +19,21 @@ app.MapGet("/", () => "Hello World!");
 //setting up basic WebSocket options as a starting point
 var webSocketOptions = new WebSocketOptions
 {
-    KeepAliveInterval = TimeSpan.FromMinutes(1)
+    KeepAliveInterval = TimeSpan.FromMinutes(1),
+    
 };
 app.UseWebSockets(webSocketOptions);
 
 app.Lifetime.ApplicationStarted.Register(async () =>
 {
+    
     using var scope = app.Services.CreateScope();
     var start = scope.ServiceProvider.GetRequiredService<TwitterAPI_TAIO>();
+
     try
     {
         await start.PullTweets();
+
     }
     catch (Exception ex)
     {

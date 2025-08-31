@@ -1,3 +1,7 @@
+using xcross_backend.Controllers;
+
+
+
 public class TimingService : IHostedService, IDisposable
 {
     //reference: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services?view=aspnetcore-9.0&tabs=visual-studio
@@ -5,6 +9,8 @@ public class TimingService : IHostedService, IDisposable
     private int executionCount = 0;
     private readonly ILogger<TimingService> _logger;
     private Timer? _timer = null;
+
+    public event Func<Task> OnTickAsync = delegate { return Task.CompletedTask; };
 
     public TimingService(ILogger<TimingService> logger)
     {
@@ -15,18 +21,20 @@ public class TimingService : IHostedService, IDisposable
     {
         _logger.LogInformation("Timed Hosted Service running.");
 
-        _timer = new Timer(DoWork, null, TimeSpan.Zero,
-            TimeSpan.FromSeconds(5));
-
+        _timer = new Timer(DoWorkAsync, null, TimeSpan.Zero,
+            TimeSpan.FromSeconds(30));
         return Task.CompletedTask;
+        
+
     }
 
-    private void DoWork(object? state)
+    private async void DoWorkAsync(object? state)
     {
-        var count = Interlocked.Increment(ref executionCount);
-
+        //var count = Interlocked.Increment(ref executionCount);
         _logger.LogInformation(
-            "Timed Hosted Service is working. Count: {Count}", count);
+            "Ping");
+        await OnTickAsync();
+
     }
 
     public Task StopAsync(CancellationToken stoppingToken)
