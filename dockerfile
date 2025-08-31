@@ -2,10 +2,10 @@
 # 1. Build stage
 # =========================
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+ARG TESTKEY1
 
 WORKDIR /src
 COPY ["xcross-backend/xcross-backend.csproj", "xcross-backend/"]
-
 # Restore NuGet packages based on the .csproj file
 RUN dotnet restore "xcross-backend/xcross-backend.csproj"
 
@@ -20,6 +20,7 @@ RUN dotnet build "xcross-backend.csproj" -c Release -o /app/build
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/build .
+ARG TESTKEY2
 
 # Expose port 8000 inside container
 EXPOSE 8080
