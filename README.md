@@ -1,70 +1,58 @@
-# Getting Started with Create React App
+# Getting Started with XCross-Feed
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+# Quickstart Guide
+1. Clone the project from this repository.
+2. Create a free account for the [Twitter AIO API](https://rapidapi.com/viperscores-viperscores-default/api/twitter-aio) and note down the API host domain, API key and the RequestUri for the GET endpoint "Tweets by username". 
+   (other services which use the same format might use as well)
 
-In the project directory, you can run:
+## Backend 
+### Option 1: Docker
+1. Adjust dockerfile (in the rootfolder) and expose the port to a free port that you want to use. (Docker Default is 8080)
+2. Create and image of the Dockerfile. In VS Code, you can install the Docker Extension and right-click dockerfile in the folder, give it a tag.  
+3. After the image has been created, open Docker and execute the image to create a container. Map the port to **8080**:8080 (or a port of your choice). Add the environment variable with your Twitter AIO API information (see above).
 
-### `npm start`
+<img width="546" height="721" alt="image" src="https://github.com/user-attachments/assets/815fef86-f4f4-4e29-826b-005b34640859" />
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+> ApiKey_TAIO
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+>  ApiHost_TAIO
 
-### `npm test`
+>  ApiRequestUri_TAIO
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+4. Hit run, your server should then be available almost immediately.
 
-### `npm run build`
+### Option 2: Visual Studio
+To debug and further develop the backend server, I'd recommend using Visual Studio.
+1. Open Visual Studio and choose "Open Solution". Pick the file **xcross-backend.sln** in the rootfolder.
+2. Rightclick the project "xcross-backend" and click "Manage User Secrets".
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+<img width="460" height="422" alt="image" src="https://github.com/user-attachments/assets/cede8ed5-ec76-419f-b1a1-fb8e62f1a1df" />
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. Edit the secrets file that should open in the editor and enter the Environment Variables that you've received from the Twitter AIO API site.
+4. Enter the variables in the following format, and click save:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+> {
+"ApiKey_TAIO":"abc",
+"ApiHost_TAIO":"abc.com",
+"ApiRequestUri_TAIO":"https://abc"
+}
+5. Change the launch parameters to "Debug" and choose HTTP or HTTPS, keep in mind that the default ports are 5013 (HTTP) or 7191 (HTTPS).
+6. Launch the Debugging process.
 
-### `npm run eject`
+   <img width="583" height="132" alt="image" src="https://github.com/user-attachments/assets/020967e4-f568-440c-87a1-df7f9e3e342c" />
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Frontend
+1. Make sure you have npm installed.
+2. Open the file in xcross-frontend\src\components\TweetList.tsx in any editor, locate the variable 
+> const WS_URL = 'ws://localhost:5013/ws'
+2. Adjust the protocol (ws = HTTP / wss = HTTPS) and the backend port according to the settings you chose in Visual Studio or the Dockerfile.
+3. Enter the folder > cd ./xcross-frontend run the app in the terminal by running:
+> npm start
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+4. Your browser should open automatically, if not, open [http://localhost:3000](http://localhost:3000)
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+The Xcross Live Feed should now auto-populate and update as long as the backend server is still running. 
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
