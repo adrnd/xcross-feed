@@ -1,8 +1,12 @@
 ﻿using Xunit.Abstractions;
 namespace TwitterTest;
+using xcross_backend.Controllers;
+
+using xcross_backend;
 
 public class UnitTest1
 {
+    private TweetStore _tweetStore = new TweetStore();
     private readonly ITestOutputHelper _output;
     public UnitTest1(ITestOutputHelper output)
     {
@@ -16,15 +20,14 @@ public class UnitTest1
     [Fact]
     public async Task ScrapeTwitter_Test()
     {
-        var _tweeter = new TwitterAPI_TAIO();
-        var TweetList = await _tweeter.PullTweets();
-        Assert.True(TweetList.Count > 0);
-        foreach (var tweet in TweetList)
+        var tweeter = new TwitterAPI_TAIO(_tweetStore);
+        var tweetList = await tweeter.PullTweets(); // Replace with actual method to fetch tweets
+        Assert.True(tweetList.Count > 0);
+        foreach (var tweet in tweetList)
         {
             _output.WriteLine($"Tweet from {tweet.Account} at {tweet.Date}: {tweet.TweetText}");
         }
     }
-
     private class BasicTweet
     {
         required public string TweetId { get; set; }
