@@ -28,13 +28,4 @@ public class UnitTest1
             _output.WriteLine($"Tweet from {tweet.Account} at {tweet.Date}: {tweet.TweetText}");
         }
     }
-    private class BasicTweet
-    {
-        required public string TweetId { get; set; }
-        required public string Account { get; set; }
-        required public string TweetText { get; set; }
-        //required public string Date { get; set; }//TODO: parse date and pictures properly
-        //public string profilepic { get; set; } 
-        //public string? image { get; set; }
-    }
 }

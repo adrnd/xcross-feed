@@ -1,10 +1,11 @@
 # Getting Started with XCross-Feed
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This backend was built with ASP.core .net 9.0, it pulls posts from social media profiles, parses them, then broadcasts them to WebSocket clients.
 
 # Quickstart Guide
 1. Clone the project from this repository.
-2. Create a free account for the [Twitter AIO API](https://rapidapi.com/viperscores-viperscores-default/api/twitter-aio) and note down the API host domain, API key and the RequestUri for the GET endpoint "Tweets by username". 
+2. Clone the front-end from https://github.com/adrnd/xcross-frontend.git
+3. Create a free account for the [Twitter AIO API](https://rapidapi.com/viperscores-viperscores-default/api/twitter-aio) and note down the API host domain, API key and the RequestUri for the GET endpoint "Tweets by username". 
    (other services which use the same format might use as well)
 
 ## Backend 
