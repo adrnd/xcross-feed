@@ -46,12 +46,6 @@ public class TwitterAPI_TAIO : ControllerBase
 
         int tweetCount = 10; //number of tweets to pull per user, adjust as needed, currently the API pulls 20 in any case (even on their preview)
         bool ignoreExisting = true; //if we decide to parse statistics (Likes, Retweets, etc.) we can adjust this accordingly.
-
-        //for testing on Windows, define the usernames here or adjust the filed in usernames above to your needs
-        if (usernames[0] == null)
-        {
-            usernames[0] = config["USER1"] ?? "elonmusk";
-        } 
         
         string? apiHost = Environment.GetEnvironmentVariable("ApiHost_TAIO"); 
         if (apiHost == null)
@@ -62,15 +56,16 @@ public class TwitterAPI_TAIO : ControllerBase
         if (apiKey == null)
         {
             apiKey = config["ApiKey_TAIO"];
+
         }
         bool listUpdated = false;
         foreach (string user in usernames)
         {
-            string? apiUri= Environment.GetEnvironmentVariable("ApiRequestUri_TAIO");
-            
+
+            string? apiUri = config["ApiRequestUri_TAIO"];
             if (apiUri == null)
             {
-                apiUri = config["ApiRequestUri_TAIO"];
+                apiUri = Environment.GetEnvironmentVariable("ApiRequestUri_TAIO");
 
             }
             if (apiHost == null || apiKey == null || apiUri == null)
