@@ -13,7 +13,7 @@ public class TwitterAPI_TAIO : ControllerBase
     /// </summary>
     private readonly ITweetStore? _tweetStore;
 
-    static List<string> usernames = ["rodekorsnorge", "RedCross", "Adrian1518011"];//add more usernames as needed
+    static List<string> usernames = [Environment.GetEnvironmentVariable("USER1"), Environment.GetEnvironmentVariable("USER2"), Environment.GetEnvironmentVariable("USER3")];//add more usernames as needed
 
     public class BasicTweet
     {
