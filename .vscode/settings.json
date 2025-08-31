@@ -1,3 +1,4 @@
 {
-    "dotnet.defaultSolution": "xcross-backend.sln"
+    "dotnet.defaultSolution": "xcross-backend.sln",
+    
 }

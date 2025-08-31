@@ -2,6 +2,7 @@
 # 1. Build stage
 # =========================
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+
 WORKDIR /src
 COPY ["xcross-backend/xcross-backend.csproj", "xcross-backend/"]
 
@@ -22,6 +23,8 @@ COPY --from=build /app/build .
 
 # Expose port 8000 inside container
 EXPOSE 8080
+
+
 
 # Run the app
 ENTRYPOINT ["dotnet", "xcross-backend.dll"]
