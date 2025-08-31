@@ -8,35 +8,12 @@ namespace xcross_backend.Controllers;
 /// </summary>
 public class TwitterAPI_TAIO : ControllerBase
 {
-    public interface ITweetStore
-    {
-        List<BasicTweet> TweetsList { get; }
-        void AddToTweets(IEnumerable<BasicTweet> tweets);
-    }
+    /// <summary>
+    /// Interface now in it's seperate Interface class. 
+    /// </summary>
+    private readonly ITweetStore? _tweetStore;
 
-    public class TweetStore : ITweetStore
-    {
-        //list remains until the server or app is restarted
-        public List<BasicTweet> TweetsList { get; set; } = new();
-        int MaxAmount = 30;
-        public void AddToTweets(IEnumerable<BasicTweet> newTweets)
-        {
-            TweetsList.AddRange(newTweets);
-            TweetsList = TweetsList.OrderByDescending(t => t.Date).ToList();
-            if (TweetsList.Count >= MaxAmount)
-            {
-                // Remove everything after the Max
-                TweetsList = TweetsList[..MaxAmount];
-            }
-        }
-    }
-    private readonly ITweetStore _tweetStore;
-    public TwitterAPI_TAIO(ITweetStore tweetStore)
-    {
-        _tweetStore = tweetStore;
-    }
-
-    static List<string> usernames = ["rodekorsnorge", "RedCross", "Adrian1518011"];//add more usernames as needed
+    static List<string> usernames = [Environment.GetEnvironmentVariable("USER1"), Environment.GetEnvironmentVariable("USER2"), Environment.GetEnvironmentVariable("USER3")];//add more usernames as needed
 
     public class BasicTweet
     {
@@ -44,9 +21,22 @@ public class TwitterAPI_TAIO : ControllerBase
         public string Account { get; set; }
         public string TweetText { get; set; }
         public string Date { get; set; }
-        public string? ProfilePic { get; set; }
+        public string ProfilePic { get; set; }
         public string? MediaURL { get; set; }
     }
+    /// <summary>
+    /// Adding the TweetStore to the service.
+    /// </summary>
+    /// <param name="tweetStore"></param>
+    public TwitterAPI_TAIO(ITweetStore tweetStore)
+    {
+        _tweetStore = tweetStore;
+    }
+    /// <summary>
+    /// Pulls newest tweets from the profiles in the usernames list. Merges with the TweetsList in the TweetStoreInterface.
+    /// </summary>
+    /// <returns>Returns the TweetsList for testing purposes.</returns>
+    /// <exception cref="Exception"></exception>
     public async Task<List<BasicTweet>> PullTweets()
     {
 
@@ -55,17 +45,17 @@ public class TwitterAPI_TAIO : ControllerBase
         .Build();
 
         int tweetCount = 10; //number of tweets to pull per user, adjust as needed, currently the API pulls 20 in any case (even on their preview)
-        bool ignoreDuplicates = true; //if the ID is already on the list, we skip it early. This could be disabled to allow updating statistics like retweets, or likes.
+        bool ignoreExisting = true; //if we decide to parse statistics (Likes, Retweets, etc.) we can adjust this accordingly.
         
-        string? apiHost = config["ApiHost_TAIO"];
+        string? apiHost = Environment.GetEnvironmentVariable("ApiHost_TAIO"); 
         if (apiHost == null)
         {
-            apiHost = Environment.GetEnvironmentVariable("ApiHost_TAIO");
+            apiHost = config["ApiHost_TAIO"];
         }
-        string? apiKey = config["ApiKey_TAIO"];
+        string? apiKey = Environment.GetEnvironmentVariable("ApiKey_TAIO"); 
         if (apiKey == null)
         {
-            apiKey = Environment.GetEnvironmentVariable("ApiKey_TAIO");
+            apiKey = config["ApiKey_TAIO"];
 
         }
         bool listUpdated = false;
@@ -82,7 +72,7 @@ public class TwitterAPI_TAIO : ControllerBase
             {
                 throw new Exception("Missing API credentials in environment variables.");
             }
-            apiUri = apiUri.Replace("%COUNT%", tweetCount.ToString()) + user; //TODO: needs to be adjusted to account for other link formats
+            apiUri = apiUri.Replace("%COUNT%", tweetCount.ToString()).Replace("%USERNAME%", user);
             Console.WriteLine("Environment variables loaded successfully.");
 
             var client = new HttpClient();
@@ -104,6 +94,8 @@ public class TwitterAPI_TAIO : ControllerBase
                 }
                 catch 
                 {
+                    //Error 400 seems to happens when 4 or more profiles are in the username list or when refreshes happen in quick succession.
+                    //We abort the attempt and wait for the next Refresh ping
                     break;
                 }
                 var body = await response.Content.ReadAsStringAsync();
@@ -133,7 +125,7 @@ public class TwitterAPI_TAIO : ControllerBase
                 {
                     continue;
                 }
-                if (MergeTweetData(tweetlist, ignoreDuplicates) == true)
+                if (MergeTweetData(tweetlist, ignoreExisting) == true)
                 {
                     listUpdated = true;
                     Console.WriteLine("Tweets merged.");
@@ -142,21 +134,26 @@ public class TwitterAPI_TAIO : ControllerBase
                 {
                     Console.WriteLine("No no tweets.");
                 }
-                await Task.Delay(1500); //reducing chances of running into the API limit
+                await Task.Delay(1500); //reducing chances of running into the API limits
             }
 
         }
         if (listUpdated)
         {
-            //TODO: add event to subscribe to?
+            //TODO: add event to subscribe to or remove the reflection
         }
-        return _tweetStore.TweetsList;
+        return _tweetStore.TweetsList; //for tests
     }
-
+    /// <summary>
+    /// Gets the tweet list from the API call, then parses and filters every tweet, then merges new tweets into the TweetStore TweetList. Not pretty but it works.
+    /// </summary>
+    /// <param name="tweetlist"></param>
+    /// <param name="ignoreDuplicates">Skips over existing entries. Could be set to true in case statistics needs to be updated as well in the future.</param>
+    /// <returns>True = new tweets merged, False = no new tweets merged</returns>
     bool MergeTweetData(System.Text.Json.JsonElement tweetlist, bool ignoreDuplicates = true)
     {
         List<BasicTweet> newTweets = new List<BasicTweet>();
-        JsonElement tweet_legacy;
+        JsonElement tweet_legacy; //helper variable for the tricky "legacy" object
         foreach (var tweet in tweetlist.EnumerateArray())
         {
             var scrapedTweet = new BasicTweet();
@@ -181,7 +178,7 @@ public class TwitterAPI_TAIO : ControllerBase
                 {
                     continue;
                 }
-                //we do some drilling (for debugging purposes), we can these intermediate variables later
+                //we do some drilling (for debugging purposes), we can simplify these intermediate variables later
                 //idea: we could just hunt and parse for the "full_text" property directly, but this way we ensure we're in the right place and we can extract more info later
                 var tweet_details = itemContent.GetProperty("tweet_results");
                 tweet_details = tweet_details.GetProperty("result");
@@ -192,12 +189,13 @@ public class TwitterAPI_TAIO : ControllerBase
                 {
                     continue; //temporary way to skip retweets until I find a better filter
                 }
+                //the date and time are in a really strange format
                 var date_helper = tweet_legacy.GetProperty("created_at").GetString() ?? "";
                 if (date_helper != "")
                 {
                     date_helper = DateTime.ParseExact(date_helper, "ddd MMM dd HH:mm:ss zzzz yyyy",
                     CultureInfo.InvariantCulture,
-                DateTimeStyles.AdjustToUniversal).ToString("s");
+                DateTimeStyles.AdjustToUniversal).ToString("s"); //sortable ISO-like DateTime structure
                 }
                 var tweetdate = date_helper;
                 //user information is nested deeper
@@ -219,6 +217,7 @@ public class TwitterAPI_TAIO : ControllerBase
                 Console.WriteLine($"Parsing error " + ex.Message);
                 throw;
             }
+            //couldn't find a good way to check for a non-existing media URL that doesn't throw an exception that breaks the long try-catch loop above
             string mediaURL = string.Empty;
             try
             {
@@ -235,10 +234,10 @@ public class TwitterAPI_TAIO : ControllerBase
 
             //if we get here, we can create our BasicTweet object
             //TODO: check what happens when we only have a picture and no text
-
-            if (mediaURL != null || mediaURL == string.Empty) { scrapedTweet.MediaURL = mediaURL; }
+            if (mediaURL != null || mediaURL == string.Empty) 
+                { scrapedTweet.MediaURL = mediaURL; }
             newTweets.Add(scrapedTweet);
-            //add them to a local list or database as needed, for the test we just output them
+
             Console.WriteLine($"{scrapedTweet.Account} tweeted ID: {scrapedTweet.TweetId}: {scrapedTweet.TweetText}");
         }
         //returning results
