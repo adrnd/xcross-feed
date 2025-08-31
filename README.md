@@ -1,6 +1,6 @@
 # Getting Started with XCross-Feed
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This backend was built with ASP.core .net 9.0, it pulls posts from social media profiles, parses them, then broadcasts them to WebSocket clients.
 
 # Quickstart Guide
 1. Clone the project from this repository.
