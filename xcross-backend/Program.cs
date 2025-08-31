@@ -5,7 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddUserSecrets<Program>();
 builder.Services.AddSingleton<WebSocketController>();
 builder.Services.AddSingleton<TwitterAPI_TAIO>();
-builder.Services.AddSingleton<TwitterAPI_TAIO.ITweetStore, TwitterAPI_TAIO.TweetStore>(); //in-memory static list of our gathered tweets
+builder.Services.AddSingleton<ITweetStore, TweetStore>(); //in-memory static list/interface of our gathered tweets
 builder.Services.AddSingleton<TimingService>();
 
 

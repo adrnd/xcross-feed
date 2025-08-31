@@ -14,10 +14,16 @@ namespace xcross_backend.Controllers;
 /// </summary>
 public class WebSocketController : ControllerBase
 {
-    private readonly TwitterAPI_TAIO.ITweetStore _tweetStore;
+    private readonly ITweetStore _tweetStore;
     private TwitterAPI_TAIO _tweeter;
     private TimingService _timingService;
 
+    /// <summary>
+    /// Constructor for the WebSocketController and it's required services.
+    /// </summary>
+    /// <param name="tweetStore">Static TweetStore Interface</param>
+    /// <param name="tweeter">Connected Twitter API</param>
+    /// <param name="timingService">Global Timing Service</param>
     public WebSocketController(ITweetStore tweetStore, TwitterAPI_TAIO tweeter, TimingService timingService)
     {
         _tweetStore = tweetStore;
@@ -26,9 +32,17 @@ public class WebSocketController : ControllerBase
     }
     private static List<WebSocket> _sockets = new();
     private static DateTime lastCheck = DateTime.MinValue;
+    /// <summary>
+    /// simple reflection to check if the Timer Tick has ever been subscribed to
+    /// needs to be replaced with a more reliable solution
+    /// </summary>
+    private bool timerScrubscribed = false;
 
 
-
+    /// <summary>
+    /// Route to connect clients to, get's handed off to HandleWebSocketConnection;
+    /// </summary>
+    /// <returns></returns>
     [Route("/ws")]
     public async Task Get()
     {
@@ -45,47 +59,51 @@ public class WebSocketController : ControllerBase
         }
     }
     /// <summary>
-    /// When a new Socket connection gets detected, it gets added as a new WebSocket instances and added to the while loop.
-    /// ATM messages can only be sent in this loop. For simplicity sake, clients will periodically 
+    /// When a new WebSocket connection gets detected, it gets added as a _socket instances and monitored as long as it's open.
+    /// Starts the Timing Service as soon as the first 
     /// </summary>
     /// <param name="socket"></param>
     /// <returns></returns>
     public async Task HandleWebSocketConnection(WebSocket socket)
     {
-
         _sockets.Add(socket);
         var buffer = new byte[1024 * 2];
-        //push the initial tweet list now already?
+
+        //immediately trying to send the current TweetList as bytes array
         var bytes = JsonSerializer.SerializeToUtf8Bytes(_tweetStore.TweetsList);
         await socket.SendAsync(bytes, WebSocketMessageType.Text, true, default);
-        if (_sockets.Count == 1)
+
+        //starts the TimingService as soon as the first client connects 
+        if (_timingService._disposed == true)
         {
             await _timingService.StartAsync(default);
-            _timingService.OnTickAsync += async () =>
+            if (timerScrubscribed == false) //TODO: check if the OnTickAsync event needs to be reinitialized in case the timer got restarted
             {
-                Console.WriteLine("ws Received Ping");
-                await RefreshTweets(true);
-            };
+                _timingService.OnTickAsync += async () => //subscribing to the Tick event of the TimingService, triggers a refresh
+                {
+
+                    Console.WriteLine("Received Ping");
+                    await RefreshTweets(true);
+                };
+            }
         }
-        //this loop is where the communication happens, you should not break out of it
+        //this loop is where the communication happens per client, you should not break out of it unless it closes
         while (socket.State == WebSocketState.Open)
         {
             //when we receive a message, the following lines get triggered
             var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), default);
             if (result.MessageType == WebSocketMessageType.Close)
-            {
-
+            { 
                 var closeStatus = result.CloseStatus ?? WebSocketCloseStatus.NormalClosure;
                 await socket.CloseAsync(closeStatus, result.CloseStatusDescription, default);
                 break;
             }
             else
-            if (result.MessageType == WebSocketMessageType.Text)
+            if (result.MessageType == WebSocketMessageType.Text) //received a message that is not a CloseStatus
             {
-                //for our example we can just assume that any message is a manual request to update
                 var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
                 Console.WriteLine("Received message: " + message);
-
+                //different messages can be added as commands in the future
                 if (message == "chirp")
                 {
                     if (await RefreshTweets(true) == false)
@@ -98,7 +116,7 @@ public class WebSocketController : ControllerBase
                     }
                     else
                     {
-                        var msbytes = System.Text.Encoding.UTF8.GetBytes("nothing new");
+                        var msbytes = System.Text.Encoding.UTF8.GetBytes("nothing new"); //note: seems to send the string including quotation marks (")
                         await socket.SendAsync(msbytes, WebSocketMessageType.Text, true, default);
                     }
                 }
@@ -108,40 +126,51 @@ public class WebSocketController : ControllerBase
         }
         _sockets.Remove(socket);
         if (_sockets.Count == 0)
-        { await _timingService.StopAsync(default); //disposes the timing service when no moore sockets are left,line can be removed when other services are relying on it
-            _timingService.Dispose();
+        { 
+            //await _timingService.StopAsync(default); //disposes the timing service when no more sockets are left, commented out for the case that other services are relying on it
+            //_timingService.Dispose();
         }
     }
 
+    /// <summary>
+    /// Refreshes the TweetsList in the TweetStore interface by triggering a refresh in the Twitter API service. Compares the newest entries before and after the refresh.
+    /// </summary>
+    /// <param name="sendToSockets">By default, the result of the TweetsList refresh will not get sent to the connected clients. Can be removed in production.</param>
+    /// <returns>True when new tweets were found, false when no new tweets were found.</returns>
     [Route("/chirp")]
-    public async Task<bool> RefreshTweets(bool send2Sockets = false)
+    public async Task<bool> RefreshTweets(bool sendToSockets = false)
     {
-       if (_sockets.Count == 0) { 
-            return false; }
-        if (lastCheck.AddSeconds(20) > DateTime.UtcNow) { return false; }
-        var tempList = _tweetStore.TweetsList[0].TweetId;
+       if (_sockets.Count == 0) 
+        { return false; }
+        if (lastCheck.AddSeconds(20) > DateTime.UtcNow) { return false; } //simple limit to avoid blocking the Twitter API when too many "chirp" requests come in
+        
+        string latestEntry = _tweetStore.TweetsList[0].TweetId;
         await _tweeter.PullTweets();
-        var newList = _tweetStore.TweetsList[0].TweetId;
-        if (tempList == newList)
+        string lastestEntryAfterRefresh = _tweetStore.TweetsList[0].TweetId;
+        if (latestEntry == lastestEntryAfterRefresh)
         {
             Console.WriteLine(DateTime.Now + "nothing new");
             lastCheck = DateTime.UtcNow;
             await BroadcastToAll(JsonSerializer.SerializeToUtf8Bytes("nothing new"));
             return false;
         }
-        if (send2Sockets)
+        if (sendToSockets)
         {
             lastCheck = DateTime.UtcNow;
             await BroadcastToAll(JsonSerializer.SerializeToUtf8Bytes(_tweetStore.TweetsList));
         }
         return true;
     }
-
+    /// <summary>
+    /// Sends bytes array to ALL clients that are currently connected e.g. for updating the TweetList on clients.
+    /// </summary>
+    /// <param name="data"></param>
+    /// <returns></returns>
     private async Task BroadcastToAll (byte[] data)
     {
         var sendTasks = _sockets
-        .Where(ws => ws.State == WebSocketState.Open)
-        .Select(ws => ws.SendAsync(data, WebSocketMessageType.Text, true, default));
+        .Where(s => s.State == WebSocketState.Open)
+        .Select(s => s.SendAsync(data, WebSocketMessageType.Text, true, default));
 
         // await all sends
         await Task.WhenAll(sendTasks);
