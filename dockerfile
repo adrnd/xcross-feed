@@ -5,6 +5,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 
 WORKDIR /src
 COPY ["xcross-backend/xcross-backend.csproj", "xcross-backend/"]
+
 # Restore NuGet packages based on the .csproj file
 RUN dotnet restore "xcross-backend/xcross-backend.csproj"
 
