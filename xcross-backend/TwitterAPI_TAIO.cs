@@ -14,7 +14,6 @@ public class TwitterAPI_TAIO : ControllerBase
     private readonly ITweetStore? _tweetStore;
 
     static List<string> usernames = ["rodekorsnorge", "RedCross", "Adrian1518011"];//add more usernames as needed
-//test
     public class BasicTweet
     {
         public string TweetId { get; set; }
@@ -39,6 +38,7 @@ public class TwitterAPI_TAIO : ControllerBase
     /// <exception cref="Exception"></exception>
     public async Task<List<BasicTweet>> PullTweets()
     {
+        Console.WriteLine("Usernames loaded: " + string.Join(", ", usernames));
 
         var config = new ConfigurationBuilder()
         .AddUserSecrets<Program>()
