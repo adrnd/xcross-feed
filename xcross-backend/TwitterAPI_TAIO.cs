@@ -96,6 +96,7 @@ public class TwitterAPI_TAIO : ControllerBase
                 {
                     //Error 400 seems to happens when 4 or more profiles are in the username list or when refreshes happen in quick succession.
                     //We abort the attempt and wait for the next Refresh ping
+                    Console.WriteLine("No success.");
                     break;
                 }
                 var body = await response.Content.ReadAsStringAsync();
